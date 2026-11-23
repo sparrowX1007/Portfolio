@@ -20,8 +20,10 @@ Neon fournit une chaîne de connexion dédiée et un endpoint poolé via l’opt
 
 1. Depuis le tableau de bord Render, créer un **Blueprint** depuis le dépôt GitHub. Render détectera `render.yaml` à la racine.
 2. Fournir `DATABASE_URL` avec la chaîne Neon et `FRONTEND_ORIGINS` avec l’origine Vercel exacte, par exemple `https://mon-portfolio.vercel.app` (sans chemin ni slash final).
-3. Le manifeste génère `SECRET_KEY`, active `APP_ENV=production`, exécute les migrations Alembic au démarrage puis lance Uvicorn sur le port fourni par Render.
+3. Le manifeste choisit explicitement le forfait gratuit `free`, génère `SECRET_KEY`, active `APP_ENV=production`, exécute les migrations Alembic au démarrage puis lance Uvicorn sur le port fourni par Render.
 4. Une fois le service prêt, vérifier `https://<api-render>/health` : la réponse attendue est `{"status":"ok"}`. La documentation `/docs` est désactivée en production.
+
+Le forfait Render gratuit ne facture pas le service, mais met l’API en veille après 15 minutes sans trafic; son réveil peut prendre environ une minute. Il convient pour les essais et un portfolio personnel à petit trafic, mais pas pour une API qui doit rester disponible sans interruption. Vérifie aussi les limites et éventuels dépassements d’usage dans le tableau de bord Render. [Limites des services gratuits](https://render.com/docs/free)
 
 Le manifeste lance les migrations avant chaque démarrage. Garder un seul exemplaire de l’API pendant les premiers déploiements. Pour un déploiement Render payant avec plusieurs instances, déplacer `alembic upgrade head` dans `preDeployCommand`, prévu par Render pour les tâches de migration. [Référence officielle du Blueprint Render](https://render.com/docs/blueprint-spec)
 
