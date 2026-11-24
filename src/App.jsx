@@ -56,8 +56,17 @@ function App() {
     const onScroll = () => { setScrolled(window.scrollY > 24); const ids = ['about','skills','projects','journey','contact']; let current = 'hero'; for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < innerHeight * .45) current = id; } setActive(current); };
     onScroll(); addEventListener('scroll', onScroll, { passive:true });
     const obs = new IntersectionObserver(entries => entries.forEach(e => { if(e.isIntersecting) {e.target.classList.add('is-visible'); obs.unobserve(e.target);} }), {threshold:.12});
+    const observeReveal = node => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      if (node.matches('.reveal')) obs.observe(node);
+      node.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    };
     document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
-    return () => { removeEventListener('scroll', onScroll); obs.disconnect(); };
+    const mutationObserver = new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(observeReveal));
+    });
+    mutationObserver.observe(document.querySelector('main') || document.body, { childList:true, subtree:true });
+    return () => { removeEventListener('scroll', onScroll); obs.disconnect(); mutationObserver.disconnect(); };
   }, []);
   const navIds=['about','skills','projects','journey','contact'];
   const submit = async e => {
