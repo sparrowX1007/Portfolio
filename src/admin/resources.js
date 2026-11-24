@@ -30,7 +30,7 @@ export const resources = {
   },
   skills: {
     endpoint: 'skills', title: 'Compétences', singular: 'compétence', columns: ['name', 'category', 'level', 'is_public'],
-    fields: [{name:'name',label:'Nom',required:true}, {name:'category',label:'Catégorie',required:true}, {name:'level',label:'Niveau (optionnel)',type:'number'}, {name:'icon',label:'Icône'}, {name:'display_order',label:'Ordre',type:'number',default:0}, {name:'is_public',label:'Visible publiquement',type:'checkbox',default:true}],
+    fields: [{name:'name',label:'Nom',required:true}, {name:'category',label:'Catégorie',required:true}, {name:'level',label:'Niveau (optionnel)',type:'number'}, {name:'icon',label:'Icône suggérée',type:'skill-icon',help:'Détectée depuis le nom; tu peux la modifier.'}, {name:'display_order',label:'Ordre',type:'number',default:0}, {name:'is_public',label:'Visible publiquement',type:'checkbox',default:true}],
   },
   education: {
     endpoint: 'education', title: 'Formation', singular: 'formation', columns: ['institution', 'degree', 'started_on', 'ended_on'],
