@@ -2,6 +2,10 @@
 
 Cette configuration sépare le frontend React/Vite (Vercel), l’API FastAPI (Render) et PostgreSQL (Neon). Les plateformes ne sont pas encore reliées à un dépôt ou à des comptes : ce guide prépare les fichiers et les étapes, mais ne publie pas l’application.
 
+### Ordre du premier déploiement
+
+Pour obtenir l’origine exacte à saisir dans Render, procéder ainsi : créer d’abord la base Neon, puis créer le projet Vercel et effectuer un premier déploiement pour obtenir son domaine `*.vercel.app`. L’API ne sera pas encore connectée pendant cette étape. Utiliser ensuite ce domaine dans `FRONTEND_ORIGINS` lors de la création du Blueprint Render. Une fois l’URL Render connue, ajouter `VITE_API_URL` dans Vercel et redéployer le frontend.
+
 ## 1. Préparer le dépôt
 
 1. Créer un dépôt Git privé sur GitHub et y pousser le projet.
@@ -29,16 +33,16 @@ Le manifeste lance les migrations avant chaque démarrage. Garder un seul exempl
 
 ## 4. Déployer le frontend sur Vercel
 
-1. Créer un projet Vercel depuis le même dépôt, avec le **Root Directory** à la racine du dépôt.
-2. Ajouter les variables suivantes dans **Settings → Environment Variables** pour Production :
+1. Créer un projet Vercel depuis le même dépôt, avec le **Root Directory** à la racine du dépôt, puis lancer un premier déploiement pour obtenir le domaine `*.vercel.app`. L’API n’est pas encore reliée à cette étape.
+2. Après la création du service Render, ajouter les variables suivantes dans **Settings → Environment Variables** pour Production :
 
    | Variable | Valeur |
    | --- | --- |
    | `VITE_API_URL` | `https://<api-render>/api/v1` |
    | `VITE_FORMSPREE_ENDPOINT` | `https://formspree.io/f/xnpdodwg` |
 
-3. Déployer ou redéployer après avoir enregistré les variables. `vercel.json` lance `npm run build`, publie `dist` et redirige les routes SPA comme `/admin/login` vers l’application React.
-4. Copier l’origine Vercel finale et la reporter dans `FRONTEND_ORIGINS` sur Render. Si elle change, mettre à jour Render puis redéployer l’API.
+3. Redéployer après avoir enregistré les variables. `vercel.json` lance `npm run build`, publie `dist` et redirige les routes SPA comme `/admin/login` vers l’application React.
+4. Si le domaine Vercel change, mettre à jour `FRONTEND_ORIGINS` sur Render puis redéployer l’API.
 
 Vercel documente les commandes de build, le répertoire de sortie et les réécritures SPA dans sa configuration projet. [Configuration `vercel.json`](https://vercel.com/docs/project-configuration/vercel-json), [guide Vite sur Vercel](https://vercel.com/docs/frameworks/frontend/vite)
 
