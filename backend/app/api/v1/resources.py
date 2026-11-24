@@ -1,9 +1,13 @@
 from datetime import timedelta
+import json
+import urllib.error
+import urllib.request
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
 
 from app.api.v1.resource_factory import build_resource_routers
 from app.core.db import get_db
@@ -23,6 +27,42 @@ from app.schemas import (
 
 public_router = APIRouter()
 admin_router = APIRouter()
+
+
+class TranslationInput(BaseModel):
+    texts: list[str] = Field(min_length=1, max_length=50)
+
+
+@admin_router.post("/translate", dependencies=[Depends(require_csrf)], tags=["admin:translation"])
+def translate_content(payload: TranslationInput):
+    if not settings.deepl_api_key:
+        raise HTTPException(status_code=503, detail="La traduction automatique n’est pas encore configurée sur le serveur.")
+    texts = [text.strip() for text in payload.texts]
+    if any(not text for text in texts) or sum(len(text) for text in texts) > 30000:
+        raise HTTPException(status_code=400, detail="Le texte à traduire est vide ou trop long.")
+
+    endpoint = "https://api-free.deepl.com/v2/translate" if settings.deepl_api_key.endswith(":fx") else "https://api.deepl.com/v2/translate"
+    body = json.dumps({"text": texts, "source_lang": "FR", "target_lang": "EN-GB"}).encode("utf-8")
+    request = urllib.request.Request(
+        endpoint,
+        data=body,
+        headers={
+            "Authorization": f"DeepL-Auth-Key {settings.deepl_api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        if error.code in (456, 429):
+            raise HTTPException(status_code=429, detail="Quota de traduction DeepL atteint ou temporairement limité.") from error
+        raise HTTPException(status_code=502, detail="DeepL n’a pas pu traduire ces textes. Vérifie la clé API.") from error
+    except (urllib.error.URLError, TimeoutError):
+        raise HTTPException(status_code=502, detail="Le service de traduction DeepL est temporairement inaccessible.")
+
+    return {"translations": [item["text"] for item in result.get("translations", [])]}
 
 _resources = [
     ("profiles", Profile, ProfileInput, None, ("email", "location"), True, ProfileTranslation),

@@ -23,7 +23,7 @@ Neon fournit une chaîne de connexion dédiée et un endpoint poolé via l’opt
 ## 3. Déployer l’API sur Render
 
 1. Depuis le tableau de bord Render, créer un **Blueprint** depuis le dépôt GitHub. Render détectera `render.yaml` à la racine.
-2. Fournir `DATABASE_URL` avec la chaîne Neon et `FRONTEND_ORIGINS` avec l’origine Vercel exacte, par exemple `https://mon-portfolio.vercel.app` (sans chemin ni slash final). Ajouter aussi `IMAGEKIT_PRIVATE_KEY` et `IMAGEKIT_PUBLIC_KEY` depuis ImageKit; garder la clé privée secrète.
+2. Fournir `DATABASE_URL` avec la chaîne Neon et `FRONTEND_ORIGINS` avec l’origine Vercel exacte, par exemple `https://mon-portfolio.vercel.app` (sans chemin ni slash final). Ajouter aussi `IMAGEKIT_PRIVATE_KEY` et `IMAGEKIT_PUBLIC_KEY` depuis ImageKit, ainsi que `DEEPL_API_KEY` depuis DeepL; conserver les clés privées comme secrets.
 3. Le manifeste choisit explicitement le forfait gratuit `free`, génère `SECRET_KEY`, active `APP_ENV=production`, exécute les migrations Alembic au démarrage puis lance Uvicorn sur le port fourni par Render.
 4. Une fois le service prêt, vérifier `https://<api-render>/health` : la réponse attendue est `{"status":"ok"}`. La documentation `/docs` est désactivée en production.
 
@@ -72,6 +72,7 @@ Le script demande l’adresse, le nom et un mot de passe d’au moins 12 caract�
 | `COOKIE_NAME` | valeur | `portfolio_session` |
 | `IMAGEKIT_PRIVATE_KEY` | secret | Clé privée ImageKit, uniquement côté backend |
 | `IMAGEKIT_PUBLIC_KEY` | valeur publique | Clé publique ImageKit utilisée pour le téléversement |
+| `DEEPL_API_KEY` | secret | Clé API DeepL utilisée pour générer les traductions EN |
 
 ### Vercel
 

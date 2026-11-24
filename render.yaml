@@ -25,3 +25,5 @@ services:
         sync: false
       - key: IMAGEKIT_PUBLIC_KEY
         sync: false
+      - key: DEEPL_API_KEY
+        sync: false
