@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, CircleAlert, FilePlus2, LayoutDashboard, LogOut, Menu, Plus, Search, ShieldCheck, Trash2, X } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useNavigate, useParams } from 'react-router-dom';
@@ -156,6 +156,56 @@ function SkillIconControl({ value, name, category, onChange }) {
   return <div className="admin-skill-icon-control"><select value={value || ''} onChange={event=>onChange(event.target.value)}><option value="">Automatique : {definition.label}</option>{skillIconOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select><span className="admin-skill-icon-preview"><SkillIcon icon={icon} size={18}/><small>{isSuggested?'Suggestion automatique':'Icône personnalisée'}</small></span></div>;
 }
 
+function ProjectImageUpload({ value, onChange }) {
+  const { request } = useAdmin();
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const upload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setError('');
+    if (!file.type.startsWith('image/')) { setError('Choisis un fichier image.'); return; }
+    if (file.size > 25 * 1024 * 1024) { setError('Cette image dépasse la limite de 25 Mo.'); return; }
+
+    setUploading(true);
+    try {
+      const auth = await request('/auth/imagekit-auth', { method: 'POST', body: {} });
+      const form = new FormData();
+      form.append('file', file);
+      form.append('fileName', file.name);
+      form.append('publicKey', auth.publicKey);
+      form.append('token', auth.token);
+      form.append('expire', String(auth.expire));
+      form.append('signature', auth.signature);
+      form.append('folder', '/portfolio/projects');
+      form.append('useUniqueFileName', 'true');
+      const response = await fetch('https://upload.imagekit.io/api/v1/files/upload', { method: 'POST', body: form });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'ImageKit n’a pas accepté cette image.');
+      onChange(result.url);
+    } catch (uploadError) {
+      setError(uploadError.message || 'Le téléversement a échoué.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return <div className="admin-image-upload-control">
+    <div className="admin-image-upload-row">
+      <input ref={inputRef} type="file" accept="image/*" onChange={upload} hidden />
+      <button type="button" className="admin-button admin-button-quiet" onClick={() => inputRef.current?.click()} disabled={uploading}>
+        {uploading ? <><span className="admin-spinner small"/>Téléversement…</> : <><FilePlus2 size={16}/>Choisir une image</>}
+      </button>
+      {value && <button type="button" className="admin-button admin-button-quiet" onClick={() => onChange('')}>Retirer</button>}
+    </div>
+    {value && <div className="admin-image-upload-preview"><img src={value} alt="Aperçu de l’image principale"/><span>Image téléversée</span></div>}
+    {error && <small role="alert" className="admin-image-upload-error">{error}</small>}
+  </div>;
+}
+
 function ResourcePage({ resource: resourceProp }) {
   const { resource: routeResource } = useParams();
   const resource = resourceProp || routeResource;
@@ -179,7 +229,7 @@ function ResourcePage({ resource: resourceProp }) {
       <div className="admin-table-scroll"><table className="admin-table"><thead><tr>{columns.map(col=><th key={col}>{columnTitle(col)}</th>)}<th className="admin-actions-heading">Actions</th></tr></thead><tbody>{loading?<tr><td colSpan={columns.length+1} className="admin-empty"><span className="admin-spinner small"/>Chargement des données…</td></tr>:items.length===0?<tr><td colSpan={columns.length+1} className="admin-empty">Aucun élément pour l’instant.</td></tr>:items.map(row=><tr key={row.id}>{columns.map(col=><td key={col}><TableValue value={getPathForRow(row,col)} path={col}/></td>)}<td><div className="admin-row-actions"><button aria-label="Modifier" title="Modifier" onClick={()=>setEditor({record:row,values:initialForm(definition,row)})}><FilePlus2 size={15}/></button><button className="danger" aria-label="Supprimer" title="Supprimer" onClick={()=>remove(row)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>
       <div className="admin-pagination"><span>{total?`${offset+1}–${Math.min(offset+limit,total)} sur ${total}`:'0 résultat'}</span><div><button disabled={offset===0||loading} aria-label="Page précédente" onClick={()=>setOffset(Math.max(0,offset-limit))}><ChevronLeft size={16}/></button><button disabled={offset+limit>=total||loading} aria-label="Page suivante" onClick={()=>setOffset(offset+limit)}><ChevronRight size={16}/></button></div></div>
     </section>
-    <AnimatePresence>{editor&&<motion.div className="admin-modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onMouseDown={e=>{if(e.target===e.currentTarget)setEditor(null)}}><motion.section className="admin-editor-modal" initial={{opacity:0,y:18,scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:12,scale:.98}} aria-modal="true" role="dialog" aria-labelledby="admin-editor-title"><div className="admin-modal-header"><div><span className="admin-eyebrow">{editor.record?'EDIT RECORD':'NEW RECORD'}</span><h2 id="admin-editor-title">{editor.record?'Modifier':'Ajouter'} · {definition.singular}</h2></div><button className="admin-icon-button" onClick={()=>setEditor(null)} aria-label="Fermer"><X size={18}/></button></div><form className="admin-form admin-editor-form" onSubmit={submit}><div className="admin-editor-fields">{definition.fields.map(field=><label className={`${field.type==='textarea'||field.type==='json'?'wide':''} ${field.type==='checkbox'?'check-field':''}`} key={field.name}>{field.type==='checkbox'?<><input type="checkbox" checked={Boolean(editor.values[field.name])} onChange={e=>setEditor({...editor,values:{...editor.values,[field.name]:e.target.checked}})}/>{field.label}</>:<>{field.label}{field.help&&<small>{field.help}</small>}{field.type==='skill-icon'?<SkillIconControl value={editor.values[field.name]} name={editor.values.name} category={editor.values.category} onChange={value=>updateField(field,value)}/>:field.type==='select'?<select required value={editor.values[field.name]||''} onChange={e=>updateField(field,e.target.value)}>{field.options.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>:field.type==='textarea'||field.type==='json'?<textarea required={field.type==='json'} rows={field.type==='json'?6:3} value={editor.values[field.name]} onChange={e=>updateField(field,e.target.value)}/>:<input type={field.type||'text'} min={field.type==='number'?0:undefined} value={editor.values[field.name]??''} onChange={e=>updateField(field,e.target.value)}/>}</>}</label>)}</div><div className="admin-modal-footer"><button type="button" className="admin-button admin-button-quiet" onClick={()=>setEditor(null)}>Annuler</button><button type="submit" className="admin-button admin-button-primary" disabled={saving}>{saving?<><span className="admin-spinner small"/>Enregistrement…</>:<><Check size={16}/>Enregistrer</>}</button></div></form></motion.section></motion.div>}</AnimatePresence>
+    <AnimatePresence>{editor&&<motion.div className="admin-modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onMouseDown={e=>{if(e.target===e.currentTarget)setEditor(null)}}><motion.section className="admin-editor-modal" initial={{opacity:0,y:18,scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:12,scale:.98}} aria-modal="true" role="dialog" aria-labelledby="admin-editor-title"><div className="admin-modal-header"><div><span className="admin-eyebrow">{editor.record?'EDIT RECORD':'NEW RECORD'}</span><h2 id="admin-editor-title">{editor.record?'Modifier':'Ajouter'} · {definition.singular}</h2></div><button className="admin-icon-button" onClick={()=>setEditor(null)} aria-label="Fermer"><X size={18}/></button></div><form className="admin-form admin-editor-form" onSubmit={submit}><div className="admin-editor-fields">{definition.fields.map(field=><label className={`${field.type==='textarea'||field.type==='json'?'wide':''} ${field.type==='checkbox'?'check-field':''}`} key={field.name}>{field.type==='checkbox'?<><input type="checkbox" checked={Boolean(editor.values[field.name])} onChange={e=>setEditor({...editor,values:{...editor.values,[field.name]:e.target.checked}})}/>{field.label}</>:<>{field.label}{field.help&&<small>{field.help}</small>}{field.type==='skill-icon'?<SkillIconControl value={editor.values[field.name]} name={editor.values.name} category={editor.values.category} onChange={value=>updateField(field,value)}/>:field.type==='image-upload'?<ProjectImageUpload value={editor.values[field.name]} onChange={value=>setEditor(current=>({...current,values:{...current.values,[field.name]:value}}))}/>:field.type==='select'?<select required value={editor.values[field.name]||''} onChange={e=>updateField(field,e.target.value)}>{field.options.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>:field.type==='textarea'||field.type==='json'?<textarea required={field.type==='json'} rows={field.type==='json'?6:3} value={editor.values[field.name]} onChange={e=>updateField(field,e.target.value)}/>:<input type={field.type||'text'} min={field.type==='number'?0:undefined} value={editor.values[field.name]??''} onChange={e=>updateField(field,e.target.value)}/>}</>}</label>)}</div><div className="admin-modal-footer"><button type="button" className="admin-button admin-button-quiet" onClick={()=>setEditor(null)}>Annuler</button><button type="submit" className="admin-button admin-button-primary" disabled={saving}>{saving?<><span className="admin-spinner small"/>Enregistrement…</>:<><Check size={16}/>Enregistrer</>}</button></div></form></motion.section></motion.div>}</AnimatePresence>
     <AnimatePresence>{toast&&<motion.div className="admin-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}}><Check size={15}/>{toast}</motion.div>}</AnimatePresence>
   </>;
 }

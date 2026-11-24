@@ -1,4 +1,8 @@
 from datetime import timedelta
+import hashlib
+import hmac
+import secrets
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -21,6 +25,23 @@ def check_origin(request: Request) -> None:
     origin = request.headers.get("origin")
     if origin and origin not in settings.frontend_origins:
         raise HTTPException(status_code=403, detail="Origin not allowed.")
+
+
+@router.post("/imagekit-auth")
+def imagekit_auth(request: Request, user: CsrfAdminUser):
+    """Issue short-lived ImageKit upload credentials to an authenticated admin."""
+    check_origin(request)
+    if not settings.imagekit_private_key or not settings.imagekit_public_key:
+        raise HTTPException(status_code=503, detail="Le téléversement d’images n’est pas encore configuré sur le serveur.")
+
+    token = secrets.token_urlsafe(24)
+    expire = int(time.time()) + 300
+    signature = hmac.new(
+        settings.imagekit_private_key.encode("utf-8"),
+        f"{token}{expire}".encode("utf-8"),
+        hashlib.sha1,
+    ).hexdigest()
+    return {"token": token, "expire": expire, "signature": signature, "publicKey": settings.imagekit_public_key}
 
 
 @router.post("/login", response_model=LoginOutput)

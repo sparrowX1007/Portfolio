@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     frontend_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     session_ttl_hours: int = 12
     cookie_name: str = "portfolio_session"
+    imagekit_private_key: str | None = None
+    imagekit_public_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 

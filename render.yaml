@@ -21,3 +21,7 @@ services:
         value: "12"
       - key: COOKIE_NAME
         value: portfolio_session
+      - key: IMAGEKIT_PRIVATE_KEY
+        sync: false
+      - key: IMAGEKIT_PUBLIC_KEY
+        sync: false

@@ -18,7 +18,7 @@ export const resources = {
   projects: {
     endpoint: 'projects', title: 'Projets', singular: 'projet', columns: ['translations.fr.name', 'status', 'completed_on', 'is_featured'],
     fields: [
-      { name: 'image_url', label: 'Image principale (URL)', type: 'url' }, { name: 'github_url', label: 'GitHub', type: 'url' },
+      { name: 'image_url', label: 'Image principale', type: 'image-upload', help: 'Choisis une image depuis ton ordinateur; elle sera téléversée sur ImageKit.' }, { name: 'github_url', label: 'GitHub', type: 'url' },
       { name: 'demo_url', label: 'Démo', type: 'url' }, { name: 'completed_on', label: 'Date de réalisation' },
       { name: 'status', label: 'Publication', type: 'select', options: [['draft','Brouillon'],['published','Publié']] },
       { name: 'is_featured', label: 'Projet mis en avant', type: 'checkbox' }, { name: 'display_order', label: 'Ordre d’affichage', type: 'number', default: 0 },
